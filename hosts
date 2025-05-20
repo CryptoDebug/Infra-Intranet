@@ -1,0 +1,6 @@
+127.0.0.1 localhost
+::1 localhost
+127.0.0.1 nextcloud.monentreprise.local
+127.0.0.1 grafana.monentreprise.local
+127.0.0.1 prometheus.monentreprise.local
+127.0.0.1 keycloak.monentreprise.local 

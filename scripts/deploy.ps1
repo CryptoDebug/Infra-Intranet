@@ -1,26 +1,22 @@
-# Script de déploiement de l'intranet
 Write-Host "Déploiement de l'intranet d'entreprise..."
 
-# Vérification de Docker
+# Vérification de Docker et Docker Compose
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
     Write-Error "Docker n'est pas installé. Veuillez l'installer avant de continuer."
     exit 1
 }
-
-# Vérification de Docker Compose
 if (-not (Get-Command docker-compose -ErrorAction SilentlyContinue)) {
     Write-Error "Docker Compose n'est pas installé. Veuillez l'installer avant de continuer."
     exit 1
 }
 
-# Création des certificats SSL auto-signés
 Write-Host "Création des certificats SSL..."
 $sslDir = "config/nginx/ssl"
 if (-not (Test-Path $sslDir)) {
     New-Item -ItemType Directory -Path $sslDir -Force
 }
 
-# Génération des certificats SSL
+# Génération des certificats SSL (auto-signés)
 $certPath = "$sslDir/nextcloud.crt"
 $keyPath = "$sslDir/nextcloud.key"
 if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
@@ -29,11 +25,9 @@ if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
         -subj "/C=FR/ST=IDF/L=Paris/O=Mon Entreprise/CN=nextcloud.monentreprise.local"
 }
 
-# Démarrage des services
 Write-Host "Démarrage des services..."
 docker-compose up -d
 
-# Vérification des services
 Write-Host "Vérification des services..."
 $services = @("ldap", "nextcloud", "db", "nginx", "prometheus", "grafana")
 foreach ($service in $services) {

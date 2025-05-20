@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intranet - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/keycloak-js@latest/dist/keycloak.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Form -->
+        <div class="login-container" id="loginForm">
+            <div class="login-box">
+                <h2>Connexion</h2>
+                <form id="login">
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+                    </div>
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="Mot de passe" required>
+                    </div>
+                    <button type="submit">Se connecter</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard-container" id="dashboard" style="display: none;">
+            <div class="sidebar">
+                <div class="logo">
+                    <h2>Intranet</h2>
+                </div>
+                <ul class="nav-links">
+                    <li class="active">
+                        <a href="#"><i class="fas fa-home"></i><span>Accueil</span></a>
+                    </li>
+                    <li>
+                        <a href="/nextcloud" target="_blank"><i class="fas fa-cloud"></i><span>Nextcloud</span></a>
+                    </li>
+                    <li>
+                        <a href="/grafana" target="_blank"><i class="fas fa-chart-line"></i><span>Grafana</span></a>
+                    </li>
+                    <li>
+                        <a href="/prometheus" target="_blank"><i class="fas fa-server"></i><span>Prometheus</span></a>
+                    </li>
+                    <li id="adminSection" style="display: none;">
+                        <a href="#" id="userManagement"><i class="fas fa-users"></i><span>Utilisateurs</span></a>
+                    </li>
+                    <li>
+                        <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Déconnexion</span></a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="main-content">
+                <header>
+                    <div class="header-content">
+                        <h1>Tableau de bord</h1>
+                        <div class="user-info">
+                            <span id="userDisplayName">Chargement...</span>
+                            <img id="userAvatar" src="https://via.placeholder.com/40" alt="Avatar" class="avatar">
+                        </div>
+                    </div>
+                </header>
+
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <i class="fas fa-cloud"></i>
+                        <h3>Nextcloud</h3>
+                        <p>Accédez à vos fichiers et documents</p>
+                        <a href="/nextcloud" target="_blank" class="btn">Accéder</a>
+                    </div>
+                    <div class="card">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>Grafana</h3>
+                        <p>Visualisez vos métriques et tableaux de bord</p>
+                        <a href="/grafana" target="_blank" class="btn">Accéder</a>
+                    </div>
+                    <div class="card">
+                        <i class="fas fa-server"></i>
+                        <h3>Prometheus</h3>
+                        <p>Surveillez vos services et métriques</p>
+                        <a href="/prometheus" target="_blank" class="btn">Accéder</a>
+                    </div>
+                    <div class="card" id="adminCard" style="display: none;">
+                        <i class="fas fa-users"></i>
+                        <h3>Gestion des utilisateurs</h3>
+                        <p>Gérez les utilisateurs et les permissions</p>
+                        <a href="#" id="userManagementBtn" class="btn">Accéder</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration Keycloak
+        const keycloak = new Keycloak({
+            url: 'http://localhost:8080',
+            realm: 'intranet',
+            clientId: 'intranet-client'
+        });
+
+        // Initialisation de Keycloak
+        keycloak.init({ onLoad: 'check-sso' })
+            .then(function(authenticated) {
+                if (authenticated) {
+                    showDashboard();
+                    updateUserInfo();
+                }
+            })
+            .catch(function(error) {
+                console.error('Erreur d\'initialisation:', error);
+            });
+
+        // Gestion de la connexion
+        document.getElementById('login').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            keycloak.login({
+                username: username,
+                password: password
+            })
+            .then(function() {
+                showDashboard();
+                updateUserInfo();
+            })
+            .catch(function(error) {
+                console.error('Erreur de connexion:', error);
+                alert('Erreur de connexion. Veuillez réessayer.');
+            });
+        });
+
+        // Gestion de la déconnexion
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            keycloak.logout();
+        });
+
+        // Affichage du tableau de bord
+        function showDashboard() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'flex';
+        }
+
+        // Mise à jour des informations utilisateur
+        function updateUserInfo() {
+            const userInfo = keycloak.tokenParsed;
+            document.getElementById('userDisplayName').textContent = userInfo.name || userInfo.preferred_username;
+            
+            // Vérification des rôles administrateur
+            const isAdmin = keycloak.hasRealmRole('admin');
+            document.getElementById('adminSection').style.display = isAdmin ? 'block' : 'none';
+            document.getElementById('adminCard').style.display = isAdmin ? 'block' : 'none';
+        }
+
+        // Gestion des utilisateurs (visible uniquement pour les admins)
+        document.getElementById('userManagement').addEventListener('click', function(e) {
+            e.preventDefault();
+            if (keycloak.hasRealmRole('admin')) {
+                // Redirection vers l'interface de gestion des utilisateurs
+                window.location.href = '/user-management';
+            }
+        });
+
+        // Ajout des tokens aux requêtes sortantes
+        function addTokenToRequests() {
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options = {}) {
+                if (keycloak.token) {
+                    options.headers = {
+                        ...options.headers,
+                        'Authorization': `Bearer ${keycloak.token}`
+                    };
+                }
+                return originalFetch(url, options);
+            };
+        }
+
+        // Initialisation des tokens
+        addTokenToRequests();
+    </script>
+</body>
+</html> 
