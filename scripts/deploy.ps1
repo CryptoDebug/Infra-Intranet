@@ -20,18 +20,24 @@ if (-not (Test-Path $sslDir)) {
 $certPath = "$sslDir/nextcloud.crt"
 $keyPath = "$sslDir/nextcloud.key"
 if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
-        -keyout $keyPath -out $certPath `
-        -subj "/C=FR/ST=IDF/L=Paris/O=Mon Entreprise/CN=nextcloud.monentreprise.local"
+    $gitBashPath = "C:\Program Files\Git\bin\bash.exe"
+    if (Test-Path $gitBashPath) {
+        $command = "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout $keyPath -out $certPath -subj '/C=FR/ST=IDF/L=Paris/O=Mon Entreprise/CN=nextcloud.monentreprise.local'"
+        & $gitBashPath -c $command
+    } else {
+        Write-Error "Git Bash not found. Please install Git."
+        exit 1
+    }
 }
 
 Write-Host "Démarrage des services..."
 docker-compose up -d
 
 Write-Host "Vérification des services..."
-$services = @("ldap", "nextcloud", "db", "nginx", "prometheus", "grafana")
+$services = @("mysql", "postgres", "keycloak", "nextcloud", "intranet", "prometheus", "grafana")
 foreach ($service in $services) {
-    $status = docker-compose ps $service
+    $containerName = "infra-intranet-${service}-1"
+    $status = docker ps --filter "name=$containerName" --format "{{.Status}}"
     if ($status -match "Up") {
         Write-Host "$service est démarré avec succès" -ForegroundColor Green
     } else {
