@@ -6,12 +6,13 @@ L'intranet d'entreprise est construit avec une architecture moderne basée sur d
 
 ## Composants
 
-### 1. OpenLDAP
-- **Rôle** : Gestion centralisée des utilisateurs et des groupes
+### 1. Keycloak
+- **Rôle** : Gestion de l'authentification SSO (Single Sign-On)
 - **Configuration** : 
-  - Base DN : dc=monentreprise,dc=local
-  - Ports : 389 (LDAP), 636 (LDAPS)
-- **Sécurité** : Communication chiffrée via LDAPS
+  - Port : 8080
+  - Realm : intranet
+  - Client : intranet-client
+- **Sécurité** : OAuth2/OpenID Connect
 
 ### 2. Nextcloud
 - **Rôle** : Portail d'accès unifié et partage de fichiers
@@ -20,21 +21,21 @@ L'intranet d'entreprise est construit avec une architecture moderne basée sur d
   - Calendrier
   - Contacts
   - Notes
-- **Intégration** : Authentification via OpenLDAP
+- **Intégration** : Authentification via Keycloak
 
-### 3. Base de données (MariaDB)
+### 3. Base de données (MySQL)
 - **Rôle** : Stockage des données Nextcloud
 - **Configuration** :
   - Base de données : nextcloud
   - Utilisateur dédié avec privilèges limités
 
 ### 4. Nginx
-- **Rôle** : Reverse proxy et terminaison SSL
+- **Rôle** : Reverse proxy et interface principale
 - **Fonctionnalités** :
-  - Redirection HTTP vers HTTPS
-  - Gestion des certificats SSL
-  - Headers de sécurité
-  - Load balancing
+  - Interface d'accès unifié
+  - Redirection vers les services
+  - Gestion des headers de sécurité
+  - Proxy pour les services internes
 
 ### 5. Monitoring
 - **Prometheus** : Collecte des métriques
@@ -48,23 +49,20 @@ L'intranet d'entreprise est construit avec une architecture moderne basée sur d
 
 ```
 [Internet] → [Nginx Reverse Proxy] → [Services Internes]
+                                    ├── Keycloak (SSO)
                                     ├── Nextcloud
-                                    ├── OpenLDAP
-                                    ├── MariaDB
-                                    └── Monitoring
+                                    ├── MySQL
+                                    └── Monitoring (Prometheus/Grafana)
 ```
 
 ## Sécurité
 
-### 1. Chiffrement
-- TLS 1.2/1.3 pour toutes les communications
-- Certificats SSL auto-signés (en production, utiliser Let's Encrypt)
-
-### 2. Authentification
-- Authentification centralisée via OpenLDAP
+### 1. Authentification
+- Authentification centralisée via Keycloak
+- SSO pour tous les services
 - Principe du moindre privilège appliqué
 
-### 3. Headers de sécurité
+### 2. Headers de sécurité
 - X-Frame-Options
 - X-XSS-Protection
 - X-Content-Type-Options

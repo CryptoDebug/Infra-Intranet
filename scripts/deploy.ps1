@@ -10,26 +10,31 @@ if (-not (Get-Command docker-compose -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-Write-Host "Création des certificats SSL..."
-$sslDir = "config/nginx/ssl"
-if (-not (Test-Path $sslDir)) {
-    New-Item -ItemType Directory -Path $sslDir -Force
-}
+# Vérification et mise à jour du fichier hosts
+Write-Host "Configuration du fichier hosts..."
+$hostsPath = "C:\Windows\System32\drivers\etc\hosts"
+$hostsEntries = @(
+    "127.0.0.1 nextcloud.monentreprise.local",
+    "127.0.0.1 grafana.monentreprise.local",
+    "127.0.0.1 prometheus.monentreprise.local",
+    "127.0.0.1 keycloak.monentreprise.local"
+)
 
-# Génération des certificats SSL (auto-signés)
-$certPath = "$sslDir/nextcloud.crt"
-$keyPath = "$sslDir/nextcloud.key"
-if (-not (Test-Path $certPath) -or -not (Test-Path $keyPath)) {
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
-        -keyout $keyPath -out $certPath `
-        -subj "/C=FR/ST=IDF/L=Paris/O=Mon Entreprise/CN=nextcloud.monentreprise.local"
+$hostsContent = Get-Content $hostsPath
+$missingEntries = $hostsEntries | Where-Object { $hostsContent -notcontains $_ }
+
+if ($missingEntries) {
+    Write-Host "Ajout des entrées manquantes dans le fichier hosts..."
+    $missingEntries | ForEach-Object {
+        Add-Content -Path $hostsPath -Value "`n$_"
+    }
 }
 
 Write-Host "Démarrage des services..."
 docker-compose up -d
 
 Write-Host "Vérification des services..."
-$services = @("ldap", "nextcloud", "db", "nginx", "prometheus", "grafana")
+$services = @("keycloak", "nextcloud", "mysql", "nginx", "prometheus", "grafana")
 foreach ($service in $services) {
     $status = docker-compose ps $service
     if ($status -match "Up") {
@@ -41,6 +46,13 @@ foreach ($service in $services) {
 
 Write-Host "`nDéploiement terminé !"
 Write-Host "Services disponibles :"
-Write-Host "- Nextcloud : https://nextcloud.monentreprise.local"
-Write-Host "- Grafana : http://localhost:3000"
-Write-Host "- Prometheus : http://localhost:9090" 
+Write-Host "- Interface principale : http://localhost:8081"
+Write-Host "- Keycloak : http://localhost:8080"
+Write-Host "- Nextcloud : http://localhost:8081/nextcloud"
+Write-Host "- Grafana : http://localhost:8081/grafana"
+Write-Host "- Prometheus : http://localhost:8081/prometheus"
+
+Write-Host "`nIdentifiants par défaut :"
+Write-Host "- Keycloak : admin/admin"
+Write-Host "- Nextcloud : admin/admin"
+Write-Host "- Grafana : admin/admin" 
