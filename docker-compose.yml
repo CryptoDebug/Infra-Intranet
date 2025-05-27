@@ -6,6 +6,10 @@ services:
     build: .
     ports:
       - "8081:80"
+    environment:
+      - KEYCLOAK_URL=http://localhost:8080
+      - KEYCLOAK_REALM=intranet
+      - KEYCLOAK_CLIENT_ID=intranet-client
     depends_on:
       - keycloak
       - nextcloud
@@ -28,11 +32,9 @@ services:
       KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_PROXY: edge
       KC_HTTP_ENABLED: "true"
-      KC_HTTP_RELATIVE_PATH: /auth
-      KC_HTTP_HOST: keycloak
       KC_HTTP_PORT: 8080
       KC_IMPORT: /opt/keycloak/data/import/realm-export.json
-    command: start-dev
+    command: start-dev --import-realm
     ports:
       - "8080:8080"
     volumes:
@@ -93,15 +95,19 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_NAME=Keycloak
       - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=intranet-client
-      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=your-client-secret
-      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8080/auth/realms/intranet/protocol/openid-connect/auth
-      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://localhost:8080/auth/realms/intranet/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile email
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8080/realms/intranet/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://localhost:8080/realms/intranet/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=http://localhost:8080/realms/intranet/protocol/openid-connect/userinfo
+      - GF_AUTH_SIGNOUT_REDIRECT_URL=http://localhost:8080/realms/intranet/protocol/openid-connect/logout
       - GF_SERVER_ROOT_URL=http://localhost:8081/grafana
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+      - keycloak
     networks:
       - intranet-network
 
