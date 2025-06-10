@@ -66,6 +66,10 @@ services:
       - NEXTCLOUD_ADMIN_USER=admin
       - NEXTCLOUD_ADMIN_PASSWORD=admin
       - OVERWRITEPROTOCOL=http
+      - NEXTCLOUD_AUTH_TYPE=openidconnect
+      - NEXTCLOUD_OPENID_CONNECT_PROVIDER_URL=http://keycloak:8080/auth/realms/intranet
+      - NEXTCLOUD_OPENID_CONNECT_CLIENT_ID=nextcloud
+      - NEXTCLOUD_OPENID_CONNECT_CLIENT_SECRET=
     volumes:
       - nextcloud_data:/var/www/html
     depends_on:
@@ -93,10 +97,13 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
-      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=intranet-client
-      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=your-client-secret
-      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://localhost:8080/auth/realms/intranet/protocol/openid-connect/auth
-      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://localhost:8080/auth/realms/intranet/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=http://keycloak:8080/auth/realms/intranet/protocol/openid-connect/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=http://keycloak:8080/auth/realms/intranet/protocol/openid-connect/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=http://keycloak:8080/auth/realms/intranet/protocol/openid-connect/userinfo
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid email profile
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(realm_access.roles[*], 'admin') && 'Admin' || contains(realm_access.roles[*], 'user') && 'Editor' || 'Viewer'
       - GF_SERVER_ROOT_URL=http://localhost:8081/grafana
     volumes:
       - grafana_data:/var/lib/grafana
