@@ -3,88 +3,85 @@
 ## Démarrage rapide
 
 ### Prérequis
-- Docker et Docker Compose installés
-- PowerShell 5.0 ou supérieur
-- Accès administrateur
+- Docker Desktop pour Windows
+- Git pour Windows
+- Visual Studio Code (recommandé)
 
 ### Installation
 
 1. Cloner le dépôt :
 ```bash
-git clone https://github.com/CryptoDebug/Infra-Intranet
+git clone https://github.com/CryptoDebug/Infra-Intranet/
 cd Infra-Intranet
 ```
 
-2. Lancer le script de déploiement :
-```powershell
-.\scripts\deploy.ps1
+2. Configuration du système :
+   - Ajouter les entrées suivantes dans `C:\Windows\System32\drivers\etc\hosts` :
+   ```
+   127.0.0.1 nextcloud.monentreprise.local
+   127.0.0.1 grafana.monentreprise.local
+   127.0.0.1 prometheus.monentreprise.local
+   127.0.0.1 keycloak.monentreprise.local
+   ```
+
+3. Lancer les services :
+```bash
+docker-compose up -d
 ```
 
 ## Gestion des utilisateurs
 
-### Ajouter un utilisateur LDAP
+### Accès à Keycloak
+- URL : http://localhost:8080
+- Identifiants par défaut :
+  - Utilisateur : admin
+  - Mot de passe : admin
 
-1. Se connecter au conteneur LDAP :
-```bash
-docker exec -it ldap bash
-```
+### Ajouter un utilisateur dans Keycloak
 
-2. Créer un nouvel utilisateur :
-```bash
-ldapadd -x -D "cn=admin,dc=monentreprise,dc=local" -W
-```
+1. Se connecter à l'interface d'administration Keycloak
+2. Sélectionner le realm "intranet"
+3. Aller dans "Users" > "Add user"
+4. Remplir les informations :
+   - Username
+   - Email
+   - First Name
+   - Last Name
+5. Dans l'onglet "Credentials" :
+   - Définir le mot de passe
+   - Désactiver "Temporary" si nécessaire
 
-3. Entrer le contenu LDIF suivant :
-```ldif
-dn: uid=john.doe,ou=users,dc=monentreprise,dc=local
-objectClass: inetOrgPerson
-objectClass: posixAccount
-objectClass: shadowAccount
-uid: john.doe
-sn: Doe
-givenName: John
-cn: John Doe
-displayName: John Doe
-uidNumber: 1000
-gidNumber: 1000
-userPassword: {SSHA}password_hash
-homeDirectory: /home/john.doe
-loginShell: /bin/bash
-```
-
-### Supprimer un utilisateur LDAP
-
-```bash
-ldapdelete -x -D "cn=admin,dc=monentreprise,dc=local" -W "uid=john.doe,ou=users,dc=monentreprise,dc=local"
-```
+### Gérer les rôles
+1. Dans Keycloak, aller dans "Roles"
+2. Créer/modifier les rôles selon les besoins
+3. Assigner les rôles aux utilisateurs
 
 ## Gestion de Nextcloud
 
 ### Accès à l'interface
-- URL : https://nextcloud.monentreprise.local
+- URL : http://localhost:8081/nextcloud
 - Identifiants par défaut :
   - Utilisateur : admin
-  - Mot de passe : admin_password
+  - Mot de passe : admin
 
-### Configuration LDAP
-1. Aller dans Administration > Utilisateurs
-2. Cliquer sur "Intégration LDAP"
+### Configuration Keycloak
+1. Aller dans Administration > Sécurité
+2. Activer l'authentification Keycloak
 3. Configurer avec les paramètres :
-   - Serveur LDAP : ldap
-   - Port : 389
-   - DN de base : dc=monentreprise,dc=local
-   - DN administrateur : cn=admin,dc=monentreprise,dc=local
+   - URL : http://keycloak:8080
+   - Realm : intranet
+   - Client ID : intranet-client
 
 ## Monitoring
 
 ### Accès à Grafana
-- URL : http://localhost:3000
+- URL : http://localhost:8081/grafana
 - Identifiants par défaut :
   - Utilisateur : admin
-  - Mot de passe : admin_password
+  - Mot de passe : admin
 
 ### Accès à Prometheus
-- URL : http://localhost:9090
+- URL : http://localhost:8081/prometheus
 
 ## Maintenance
 
@@ -92,7 +89,7 @@ ldapdelete -x -D "cn=admin,dc=monentreprise,dc=local" -W "uid=john.doe,ou=users,
 
 #### Base de données
 ```bash
-docker exec db mysqldump -u root -p nextcloud > backup_$(date +%Y%m%d).sql
+docker exec mysql mysqldump -u root -p nextcloud > backup_$(date +%Y%m%d).sql
 ```
 
 #### Fichiers Nextcloud
@@ -131,21 +128,14 @@ docker-compose logs [service_name] | grep -i error
 
 ## Sécurité
 
-### Mise à jour des certificats SSL
-1. Générer de nouveaux certificats :
-```bash
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout config/nginx/ssl/nextcloud.key \
-    -out config/nginx/ssl/nextcloud.crt
-```
-
-2. Redémarrer Nginx :
-```bash
-docker-compose restart nginx
-```
-
 ### Rotation des logs
 Les logs sont automatiquement rotés par Docker. Pour forcer une rotation :
 ```bash
 docker-compose exec nginx nginx -s reopen
+```
+
+### Mise à jour des services
+```bash
+docker-compose pull
+docker-compose up -d
 ``` 
